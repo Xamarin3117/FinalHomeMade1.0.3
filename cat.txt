@@ -1,0 +1,523 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://xamarin.com/schemas/2014/forms"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:local="clr-namespace:LetsCookApp.CustomViews;assembly=LetsCookApp"
+             xmlns:ff="clr-namespace:FFImageLoading.Forms;assembly=FFImageLoading.Forms"  
+             xmlns:fftransformations="clr-namespace:FFImageLoading.Transformations;assembly=FFImageLoading.Transformations"
+             x:Class="LetsCookApp.Views.CategoriesView">
+
+
+    <StackLayout x:Name="MainStack" Spacing="0" HorizontalOptions="FillAndExpand" VerticalOptions="FillAndExpand">
+        <StackLayout Orientation="Horizontal" HorizontalOptions="FillAndExpand" VerticalOptions="Start" BackgroundColor="Black">
+            <ContentView HorizontalOptions="Start" VerticalOptions="Center" Padding="10,10">
+                <Image Source="menu" HorizontalOptions="Center" HeightRequest="25" WidthRequest="25" VerticalOptions="Center"/>
+                <ContentView.GestureRecognizers>
+                    <TapGestureRecognizer Tapped="Menu_Tapped"/>
+                </ContentView.GestureRecognizers>
+            </ContentView>
+            <local:CustomLabelLight Text="Categories" TextColor="#e74c3c" FontSize="20" HorizontalOptions="CenterAndExpand" VerticalOptions="CenterAndExpand"  />
+            <ContentView HorizontalOptions="End" VerticalOptions="Center" Padding="10,10">
+                <Image Source="search" HorizontalOptions="Center" VerticalOptions="Center"/>
+                <ContentView.GestureRecognizers>
+                    <TapGestureRecognizer Tapped="Search_Tapped"/>
+                </ContentView.GestureRecognizers>
+            </ContentView>
+        </StackLayout>
+
+        <local:CustomListView x:Name="categorieslist" VerticalOptions="FillAndExpand" HasUnevenRows="True" HorizontalOptions="FillAndExpand" SeparatorVisibility="None"  BackgroundColor="Black">
+            <local:CustomListView.ItemTemplate>
+                <DataTemplate>
+                    <local:CustomListViewCell>
+                        <local:CustomListViewCell.View>
+                            <Grid  HorizontalOptions="FillAndExpand" VerticalOptions="FillAndExpand">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="*"/>
+                                    <RowDefinition Height="*"/>
+                                    <RowDefinition Height="*"/>
+                                </Grid.RowDefinitions>
+                                <ff:CachedImage Grid.Column="0" Grid.Row="0" Grid.RowSpan="3" Aspect="AspectFill" Source="{Binding Image}" HorizontalOptions="FillAndExpand" VerticalOptions="FillAndExpand" LoadingPlaceholder="icon.png" ErrorPlaceholder="error.png" DownsampleToViewSize="true" >
+                                </ff:CachedImage>
+                                <StackLayout Grid.Column="0" Grid.Row="1" Orientation="Vertical" HorizontalOptions="Center" VerticalOptions="Center">
+                                    <local:CustomLabelLight Text="{Binding Title}" TextColor="#ffffff" FontAttributes="Bold" FontSize="34" HorizontalOptions="Center" VerticalOptions="Center"  />
+                                    <StackLayout Orientation="Horizontal" HorizontalOptions="Center" VerticalOptions="Center">
+                                        <Image Source="recipes.png" HorizontalOptions="Center" VerticalOptions="Center" HeightRequest="25" WidthRequest="25"/>
+                                        <local:CustomLabelLight Text="{Binding NoOfRecipes}" TextColor="#ffffff" FontAttributes="Bold" FontSize="14" HorizontalOptions="Center" VerticalOptions="Center"  />
+                                    </StackLayout>
+                                </StackLayout>
+                                <Grid.GestureRecognizers>
+                                    <TapGestureRecognizer Tapped="SubCategories_Tapped"/>
+                                </Grid.GestureRecognizers>
+                            </Grid>
+                        </local:CustomListViewCell.View>
+                    </local:CustomListViewCell>
+                </DataTemplate>
+            </local:CustomListView.ItemTemplate>
+        </local:CustomListView>
+    </StackLayout>
+</ContentPage>
+
+
+********************************** .cs ************************************************
+
+using Rg.Plugins.Popup.Services;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+
+using Xamarin.Forms;
+using Xamarin.Forms.Xaml;
+
+namespace LetsCookApp.Views
+{
+    [XamlCompilation(XamlCompilationOptions.Compile)]
+    public partial class CategoriesView : ContentPage
+    {
+        public CategoriesView()
+        {
+            InitializeComponent();
+            NavigationPage.SetHasNavigationBar(this, false);
+            var viewmodel = App.AppSetup.CategoryViewModel;
+            BindingContext = viewmodel;
+            categorieslist.ItemsSource = viewmodel.Categories;
+        }
+
+        private void SubCategories_Tapped(object sender, EventArgs e)
+        {
+            Navigation.PushAsync(new SubCategoryView());
+        }
+        private void Menu_Tapped(object sender, EventArgs e)
+        {
+            App.AppSetup.HomeViewModel.IsMenuListPresented = true;
+        }
+        private  void Search_Tapped(object sender, EventArgs e)
+        {
+            var page = new SearchView();
+
+             PopupNavigation.PushAsync(page);
+        }
+    }
+
+    public class Category
+    {
+        public ImageSource Breakfastimg { get; set; }
+        public string Breakfast { get; set; }
+        public ImageSource recipes { get; set; }
+        public string Recipes223 { get; set; }
+      
+    }
+}
+
+
+
+********************************.Model************************************************
+
+
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+
+namespace LetsCookApp.Models
+{
+    public class Category
+    {
+        public string Id { get; set; }
+        public string Title { get; set; }
+        public string Image { get; set; }
+        public object NoOfRecipes { get; set; }
+    }
+
+    public class CategoryResponse : BaseResponseModel
+    {
+        public List<Category> Categories { get; set; }
+    }
+}
+
+
+
+******************************** VM ************************************************
+
+
+using Acr.UserDialogs;
+using LetsCookApp.Models;
+using LetsCookApp.Views;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+using System.Windows.Input;
+using Xamarin.Forms;
+
+namespace LetsCookApp.ViewModels
+{
+    public class CategoryViewModel : BaseViewModel
+    {
+        #region Constructor    
+
+        public ICommand GetCotegaryCommand { get; private set; }
+        public ICommand GetSubCotegaryCommand { get; private set; }
+        public CategoryViewModel()
+        {
+            GetCotegaryCommand = new Command(() => GetCotegaryExecute());
+            GetSubCotegaryCommand = new Command(() => GetSubCotegaryExecute());
+        }
+        #endregion
+
+        #region Property
+
+
+        private List<Category> categories;
+        public List<Category> Categories
+        {
+            get { return categories; }
+            set { categories = value; RaisePropertyChanged(() => Categories); }
+        }
+        
+        private List<Recipe> recipe;
+        public List<Recipe> Recipes
+        {
+            get { return recipe; }
+            set { recipe = value; RaisePropertyChanged(() => Recipes); }
+        }
+
+
+        #endregion
+
+        #region Method
+
+        #endregion
+
+        #region Command Excute
+
+        public void GetCotegaryExecute()
+        {
+            var obj = new CommonRequest();
+            UserDialogs.Instance.ShowLoading("Requesting..");
+            userManager.getAllCategory(obj, () =>
+            {
+
+                var categoryResponse = userManager.CategoryResponse;
+                if (categoryResponse.StatusCode == 200)
+                {
+                    UserDialogs.Instance.HideLoading();
+                    Categories = new List<Category>(categoryResponse.Categories);
+                    Xamarin.Forms.Device.BeginInvokeOnMainThread(() =>
+                    {
+                        App.Current.MainPage = new Views.HomeView();
+                    });
+
+                }
+            },
+             (requestFailedReason) =>
+             {
+                 Xamarin.Forms.Device.BeginInvokeOnMainThread(() =>
+                 {
+                     //  UserDialogs.Instance.Alert(requestFailedReason.Message, null, "OK");
+                     UserDialogs.Instance.HideLoading();
+                 });
+             });
+        }
+
+        public void GetSubCotegaryExecute()
+        {
+            Xamarin.Forms.Device.BeginInvokeOnMainThread(async () =>
+            {
+                await ((MasterDetailPage)App.Current.MainPage).Detail.Navigation.PushAsync(new SubCategoryView());
+            });
+            //var obj = new CommonRequest();
+            //UserDialogs.Instance.ShowLoading("Requesting..");
+            //userManager.getSubCategory(obj, () =>
+            //{
+
+            //    var subCategoryResponse = userManager.SubCategoryResponse;
+            //    if (subCategoryResponse.StatusCode == 200)
+            //    {
+            //        UserDialogs.Instance.HideLoading();
+            //        //Recipes = new List<Category>(subCategoryResponse.Recipes);
+            //        Xamarin.Forms.Device.BeginInvokeOnMainThread(async () =>
+            //        {
+            //           await ((MasterDetailPage)App.Current.MainPage).Detail.Navigation.PushAsync(new SubCategoryView());
+            //        });
+
+            //    }
+            //},
+            // (requestFailedReason) =>
+            // {
+            //     Xamarin.Forms.Device.BeginInvokeOnMainThread(() =>
+            //     {
+            //         //  UserDialogs.Instance.Alert(requestFailedReason.Message, null, "OK");
+            //         UserDialogs.Instance.HideLoading();
+            //     });
+            // });
+        }
+        #endregion
+
+
+
+    }
+}
+
+
+=============================================
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://xamarin.com/schemas/2014/forms"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:local="clr-namespace:LetsCookApp.CustomViews;assembly=LetsCookApp"
+             x:Class="LetsCookApp.Views.SubCategoryView">
+
+
+  <StackLayout x:Name="MainStack" Spacing="0" HorizontalOptions="FillAndExpand" VerticalOptions="FillAndExpand">
+ 
+        <StackLayout Orientation="Horizontal" HorizontalOptions="FillAndExpand" VerticalOptions="Start" Margin="0" BackgroundColor="Black">
+            <ContentView HorizontalOptions="Start" VerticalOptions="Center" Padding="10,10">
+                <Image Source="backarrow" HorizontalOptions="Center" VerticalOptions="Center"/>
+                <ContentView.GestureRecognizers>
+                    <TapGestureRecognizer Tapped="Menu_Tapped"/>
+                </ContentView.GestureRecognizers>
+            </ContentView>
+            <local:CustomLabelLight Text="Backery" TextColor="#e74c3c" FontSize="20" HorizontalOptions="CenterAndExpand" VerticalOptions="CenterAndExpand"  />
+            <ContentView HorizontalOptions="End" VerticalOptions="Center" Padding="10,10">
+                <Image Source="search" HorizontalOptions="Center" VerticalOptions="Center"/>
+
+                <ContentView.GestureRecognizers>
+                    <TapGestureRecognizer Tapped="Search_Tapped"/>
+                </ContentView.GestureRecognizers>
+            </ContentView>
+        </StackLayout>
+
+        <local:CustomListView x:Name="listSubCatgory" ItemSelected ="listSubCatgory_ItemSelected" VerticalOptions="FillAndExpand" HasUnevenRows="True" HorizontalOptions="FillAndExpand" SeparatorVisibility="None"  BackgroundColor="Black">
+            <local:CustomListView.ItemTemplate>
+                <DataTemplate>
+                    <local:CustomListViewCell>
+                        <local:CustomListViewCell.View>
+                            <Grid HorizontalOptions="FillAndExpand" VerticalOptions="Start">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="30"/>
+                                </Grid.ColumnDefinitions>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="80"/>
+                                    <RowDefinition Height="50"/>
+                                    <RowDefinition Height="50"/>
+
+                                </Grid.RowDefinitions>
+                                <Image Grid.Column="0" Grid.Row="0" Grid.ColumnSpan="2" Grid.RowSpan="3" Aspect="AspectFill" Source="{Binding foodIcon}" HorizontalOptions="FillAndExpand" VerticalOptions="FillAndExpand"/>
+                                <Image Grid.Column="1" Grid.Row="1"  Aspect="AspectFit" Source="favorite" HorizontalOptions="Center" VerticalOptions="EndAndExpand"/>
+
+                                <Grid Grid.Column="0" Grid.Row="2" Grid.ColumnSpan="2" HorizontalOptions="FillAndExpand" VerticalOptions="EndAndExpand" BackgroundColor="Black" Opacity="0.8">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="30"/>
+                                    </Grid.ColumnDefinitions>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="*"/>
+                                        <RowDefinition Height="*"/>
+                                    </Grid.RowDefinitions>
+                                    <local:CustomLabelLight Grid.Column="0" Grid.Row="0" Text="{Binding Title}" FontAttributes="Bold" TextColor="#e74c3c" FontSize="14" HorizontalOptions="Start" VerticalOptions="End" Margin="10,0"/>
+
+                                    <StackLayout Grid.Column="0" Grid.Row="1" Orientation="Horizontal" HorizontalOptions="StartAndExpand" VerticalOptions="Center" Margin="10,0,0,5">
+                                        <StackLayout Orientation="Horizontal" HorizontalOptions="Center" VerticalOptions="Center">
+                                            <Image Aspect="AspectFit" Source="time" HorizontalOptions="Center" VerticalOptions="Center" HeightRequest="15" WidthRequest="15"/>
+                                            <local:CustomLabelLight Text="{Binding Cooking_time}" TextColor="#ffffff" FontSize="12" HorizontalOptions="Center" VerticalOptions="Center"/>
+                                        </StackLayout>
+
+                                        <StackLayout Orientation="Horizontal" HorizontalOptions="Center" VerticalOptions="Center">
+                                            <Image Aspect="AspectFit" Source="serving" HorizontalOptions="Center" VerticalOptions="Center" HeightRequest="15" WidthRequest="15"/>
+                                            <local:CustomLabelLight Text="{Binding Serving}" TextColor="#ffffff" FontSize="12" HorizontalOptions="Center" VerticalOptions="Center"/>
+                                        </StackLayout>
+
+                                        <StackLayout Orientation="Horizontal" HorizontalOptions="Center" VerticalOptions="Center">
+                                            <Image Aspect="AspectFit" Source="ingredients" HorizontalOptions="Center" VerticalOptions="Center" HeightRequest="15" WidthRequest="15"/>
+                                            <local:CustomLabelLight Text="{Binding Ingredient_count}" TextColor="#ffffff" FontSize="12" HorizontalOptions="Center" VerticalOptions="Center"/>
+                                        </StackLayout>
+
+                                    </StackLayout>
+                                    <Image Grid.Column="1" Grid.Row="0" Grid.RowSpan="2"  Aspect="AspectFit" Source="expand" HeightRequest="50" WidthRequest="50" HorizontalOptions="Center" VerticalOptions="Center"/>
+                                </Grid>
+                            </Grid>
+                        </local:CustomListViewCell.View>
+                    </local:CustomListViewCell>
+                </DataTemplate>
+            </local:CustomListView.ItemTemplate>
+        </local:CustomListView>
+    </StackLayout>
+
+
+</ContentPage>
+
+--------------------
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+
+using Xamarin.Forms;
+using Xamarin.Forms.Xaml;
+
+namespace LetsCookApp.Views
+{
+    [XamlCompilation(XamlCompilationOptions.Compile)]
+    public partial class SubCategoryView : ContentPage
+    {
+        public SubCategoryView()
+        {
+
+            List<SubCategory> _listAvailableAward = new List<SubCategory>()
+            {
+                new SubCategory {foodIcon = "cacke.png" ,DishName = "Cake Recipes", likeIcon = "icon.png" ,timeIcon = "icon.png" ,Time = "9 MIn", servingIcon = "icon.png", Servings="6 Servings",ingrendIcon="icon.png" , Ingrendients="14 Ingredients" ,plusIcon="icon.png"},
+                new SubCategory {foodIcon = "donat.png" ,DishName = "Donut Recipe", likeIcon = "icon.png" ,timeIcon = "icon.png" ,Time = "30 MIn", servingIcon = "icon.png", Servings="4 Servings",ingrendIcon="icon.png" , Ingrendients="8 Ingredients" ,plusIcon="icon.png"},
+                new SubCategory {foodIcon = "ruge.png" ,DishName = "Rugelach Recipe", likeIcon = "icon.png" ,timeIcon = "icon.png" ,Time = "15 MIn", servingIcon = "icon.png", Servings="4 Servings",ingrendIcon="icon.png" , Ingrendients="7 Ingredients" ,plusIcon="icon.png"},
+                new SubCategory {foodIcon = "cacke.png" ,DishName = "Cake Recipes", likeIcon = "icon.png" ,timeIcon = "icon.png" ,Time = "9 MIn", servingIcon = "icon.png", Servings="6 Servings",ingrendIcon="icon.png" , Ingrendients="14 Ingredients" ,plusIcon="icon.png"},
+
+            };
+
+            //RaisePropertyChanged(() => ListAvailableAward);
+           
+            InitializeComponent();
+            listSubCatgory.ItemsSource = _listAvailableAward;
+            NavigationPage.SetHasNavigationBar(this, false);
+            BindingContext = App.AppSetup.CategoryViewModel;
+        }
+        private void Search_Tapped(object sender, EventArgs e)
+        {
+            var page = new SearchView();
+
+            Rg.Plugins.Popup.Services.PopupNavigation.PushAsync(page);
+        }
+        private void Menu_Tapped(object sender, EventArgs e)
+        {
+            Navigation.PopAsync();
+        }
+        private void listSubCatgory_ItemSelected(object sender, SelectedItemChangedEventArgs e)
+        {
+            if (e.SelectedItem != null)
+            {
+                // var item = (Result)e.SelectedItem;
+                Navigation.PushAsync(new DishView());
+            }
+        }
+
+    }
+ 
+    public class SubCategory
+    {
+        public ImageSource foodIcon { get; set; }
+        public string DishName { get; set; }
+        public ImageSource likeIcon { get; set; }
+        public ImageSource timeIcon { get; set; }
+        public string Time { get; set; }
+        public ImageSource servingIcon { get; set; }
+        public string Servings { get; set; }
+        public ImageSource ingrendIcon { get; set; }
+        public string Ingrendients { get; set; }
+        public ImageSource plusIcon { get; set; }
+        public double UserRating { get; set; }
+    }
+}
+------------------
+SubCategoryResponse
+--------------------------
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+
+namespace LetsCookApp.Models
+{
+    
+
+    public class Recipe
+    {
+        public string Id { get; set; }
+        public string Title { get; set; }
+        public string Serving { get; set; }
+        public object Cooking_time { get; set; }
+        public string Prep_time { get; set; }
+        public string Ingredient_count { get; set; }
+        public string Image { get; set; }
+        public string ImageUrl { get; set; }
+    }
+
+    public class SubCategoryResponse : BaseResponseModel
+    {
+        public List<Recipe> Recipes { get; set; }
+    }
+}
+
+=====================================
+
+IManager
+  void getSubCategory(CommonRequest commonRequest, Action success, Action<SubCategoryResponse> failed);
+Manager
+-------
+  public async void getSubCategory(CommonRequest commonRequest, Action success, Action<SubCategoryResponse> failed)
+        {
+            bool IsNetwork = true;//await DependencyService.Get<IMediaService>().CheckNewworkConnectivity();
+            if (IsNetwork)
+            {
+
+                var url = string.Format("{0}getRecipesByCat.php?catId=1", _settingsManager.ApiHost);
+
+                await Task.Run(() =>
+                {
+                    Dictionary<string, string> head = GetHeaders();
+                    var result = _apiProvider.Get<SubCategoryResponse, CommonRequest>(url, null).Result;
+                    if (result.IsSuccessful)
+                    {
+                        if (success != null)
+                        {
+                            subCategoryResponse = result.Result;
+                            success.Invoke();
+                        }
+                    }
+                    else
+                    {
+                        failed.Invoke(result.Result);
+                    }
+                });
+            }
+            else
+            {
+                UserDialogs.Instance.HideLoading(); UserDialogs.Instance.Alert(error, null, "OK");
+            }
+        }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
